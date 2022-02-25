@@ -17,7 +17,7 @@ instance Show Cell where
     show (Uncovered 0) = "  "
     show (Uncovered v) = (show v) ++ " "
 
-    -- special case for reveal after end of the game
+    -- special cases for reveal after end of the game
     show (Covered (-1) True False) = "💣"
     show (Covered (-1) False True) = "😬" -- flagged an empty cell
 
@@ -28,16 +28,9 @@ instance Show Cell where
 instance Show Grid where
     show (Grid l) = unlines $ map (concatMap show) l
 
-
+-- return a grid with all cells revealed
 reveal :: Grid -> Grid
 reveal (Grid g) =
-
-    -- f (Covered _ False True) -> "😬"
-    -- f (Covered _ True False) -> "bombe"
-    -- f (Covered _ True True) -> "drapeau"
-    -- f (Covered n False False) -> "chiffre"
-    
-
     let f (Covered _ True False) = (Covered (-1) True False) -- bomb not flagged
         f (Covered _ False True) = (Covered (-1) False True) -- flagged an empty cell
         f (Covered n _ False) = Uncovered n
@@ -170,8 +163,7 @@ toggleFlag (Covered n hasMine hasFlag) = Covered n hasMine (not hasFlag)
 toggleFlag cell = cell
 
 
-
-
+-- game loop - Read-Eval-Print Loop (REPL)
 loop :: Int -> Int -> Int -> Grid -> IO ()
 loop i j n b@(Grid xs)
     | won n b = putStrLn "Victoire !"
@@ -186,16 +178,16 @@ loop i j n b@(Grid xs)
             cell = xs !! i !! j
 
         case c of
-            'i' -> loop (max (i - 1) 0)    j n b -- bouge le curseur vers le haut
-            'k' -> loop (min (i + 1) maxi) j n b -- bouge le curseur vers le bas
-            'j' -> loop i (max (j - 1) 0)    n b -- bouge le curseur vers la gauche
-            'l' -> loop i (min (j + 1) maxj) n b -- bouge le curseur vers la droite
+            'i' -> loop (max (i - 1) 0)    j n b -- move cursor up
+            'k' -> loop (min (i + 1) maxi) j n b -- move cursor down
+            'j' -> loop i (max (j - 1) 0)    n b -- move cursor left
+            'l' -> loop i (min (j + 1) maxj) n b -- move cursor right
 
-            'f' -> -- pose ou enlève un drapeau sur la case i, j
+            'f' -> -- toggle flag on cell (i, j)
                 loop i j n (Grid $ applyij toggleFlag i j xs)
                 
-            -- découvre la case i, j; BOUM ?
-            -- NOTE: on ne peut pas découvrir une case avec drapeau (garde-fou)
+            -- uncover cell (i, j); BOOM ?
+            -- NOTE: we can't uncover a cell with a flag on it
             'u' -> case cell of 
                 Covered _ True  False -> do
                     putStrLn "Boom !"
@@ -203,7 +195,8 @@ loop i j n b@(Grid xs)
                 Covered _ False False -> loop i j n $ uncover (i, j) b
                 _ -> loop i j n b
                 
-            otherwise -> loop i j n b -- ne fait rien
+            -- don't do anything
+            otherwise -> loop i j n b
 
 main :: IO ()
 main = do
@@ -211,16 +204,16 @@ main = do
     hSetBuffering stdin NoBuffering
     -- désactive l’écho du caractère entré sur le terminal
     hSetEcho stdin False
-    -- récupère deux StdGen pour la génération aléatoire
+    -- create two StdGen for random number generation
     g  <- newStdGen
     g' <- newStdGen
-    -- nombre de mines, lignes, colonnes
+    -- number of mines, lines and columns
     let nmines = 10
         l = 7
         c = 10
         
-    -- créer la grille, ajouter les mines, mettre à jour les voisins
+    -- create the grid, add the mines, and update mines count
     let bEmpty = grid l c $ randSet nmines l c g g'
         b = updateGrid bEmpty (neighbourMap bEmpty)
 
-    loop 0 0 nmines b -- démarrer la REPL
+    loop 0 0 nmines b -- start the REPL

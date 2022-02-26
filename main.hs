@@ -1,9 +1,9 @@
 -- Minesweeper (TP PFONC)
 import Data.Set (Set)
-import System.Random
 import Data.List
 import qualified Data.Set as S
 import System.IO
+import System.Random (StdGen, newStdGen, randomRs)
 
 -- Type declaration
 data Cell = Covered Int Bool Bool | Uncovered Int | Selected

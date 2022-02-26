@@ -4,6 +4,8 @@ import Data.List
 import qualified Data.Set as S
 import System.IO
 import System.Random (StdGen, newStdGen, randomRs)
+import Data.Time.Clock (getCurrentTime, diffUTCTime)
+import Text.Printf (printf)
 
 -- Type declaration
 data Cell = Covered Int Bool Bool | Uncovered Int | Selected
@@ -166,7 +168,7 @@ toggleFlag cell = cell
 -- game loop - Read-Eval-Print Loop (REPL)
 loop :: Int -> Int -> Int -> Grid -> IO ()
 loop i j n b@(Grid xs)
-    | won n b = putStrLn "Victoire !"
+    | won n b = putStr "Victoire !"
     | otherwise = do
         -- affiche la grille avec la case i, j sélectionnée
         putStrLn $ show $ Grid $ applyij (const Selected) i j xs
@@ -190,8 +192,8 @@ loop i j n b@(Grid xs)
             -- NOTE: we can't uncover a cell with a flag on it
             'u' -> case cell of 
                 Covered _ True  False -> do
-                    putStrLn "Boom !"
                     putStrLn $ show $ reveal b
+                    putStr "Boom !"
                 Covered _ False False -> loop i j n $ uncover (i, j) b
                 _ -> loop i j n b
                 
@@ -200,6 +202,7 @@ loop i j n b@(Grid xs)
 
 main :: IO ()
 main = do
+
     -- désactive l’attente de la touche entrée pour l’acquisition
     hSetBuffering stdin NoBuffering
     -- désactive l’écho du caractère entré sur le terminal
@@ -216,4 +219,8 @@ main = do
     let bEmpty = grid l c $ randSet nmines l c g g'
         b = updateGrid bEmpty (neighbourMap bEmpty)
 
+    startTime <- getCurrentTime
     loop 0 0 nmines b -- start the REPL
+    endTime <- getCurrentTime
+
+    printf " (en %.2fs)\n" (realToFrac $ diffUTCTime endTime startTime :: Double)
